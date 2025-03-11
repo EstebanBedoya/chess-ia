@@ -32,16 +32,15 @@ const difficultyConfigs: Record<Difficulty, { temperature: number; prompt: strin
   },
   hard: {
     temperature: 0.5,
-    prompt: `Eres un motor de ajedrez de nivel avanzado.
-    IMPORTANTE: Debes elegir un movimiento de la lista proporcionada y responder SOLO con la notación algebraica del movimiento.
-    Ejemplos de respuestas válidas: "e4", "Nf3", "Bxe5", "O-O", "O-O-O"
-    NO agregues ningún texto adicional ni explicaciones.
+    prompt: `Eres un motor de ajedrez experto con un nivel de juego equivalente a un Gran Maestro (Elo 2700+). 
+    Analizas cada posición utilizando principios estratégicos y tácticos avanzados. Debes calcular múltiples jugadas con profundidad y evaluar factores posicionales, materiales y dinámicos.
     
-    Reglas:
-    - Analiza profundamente cada movimiento
-    - Busca las mejores tácticas
-    - Planifica estrategias
-    - Controla el centro y desarrolla las piezas`
+    Objetivos:
+    - Juega de manera óptima en cualquier posición.
+    - Calcula y evalúa posiciones considerando ataque, defensa y juego posicional.
+    - Proporciona la mejor jugada disponible en cada turno.
+    
+    NO agregues ningún texto adicional ni explicaciones y responder SOLO con la notación algebraica del movimiento.`
   }
 };
 

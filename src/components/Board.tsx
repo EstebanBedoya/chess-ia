@@ -4,8 +4,22 @@ import { Piece, Position } from '../pieces/Piece';
 
 const getPieceSymbol = (piece: Piece): string => {
   const symbols = {
-    white: { king: '♔', queen: '♕', rook: '♖', bishop: '♗', knight: '♘', pawn: '♙' },
-    black: { king: '♚', queen: '♛', rook: '♜', bishop: '♝', knight: '♞', pawn: '♟' }
+    white: {
+      king: '♔',
+      queen: '♕',
+      rook: '♖',
+      bishop: '♗',
+      knight: '♘',
+      pawn: '♙'
+    },
+    black: {
+      king: '♚',
+      queen: '♛',
+      rook: '♜',
+      bishop: '♝',
+      knight: '♞',
+      pawn: '♟︎'
+    }
   };
   return symbols[piece.getColor()][piece.getType()];
 };
@@ -46,16 +60,16 @@ const Board: React.FC<BoardProps> = ({ board, selectedPiece, validMoves, onSquar
 
   const renderSquare = (row: number, col: number) => {
     const piece = board[row][col];
-    const isLight = (row + col) % 2 === 0;
     const isSelected = selectedPiece?.row === row && selectedPiece?.col === col;
-    const isValidMoveSquare = isValidMove(row, col);
+    const isValidMove = validMoves.some(move => move.row === row && move.col === col);
+    const squareColor = (row + col) % 2 === 0 ? 'white' : 'black';
 
     return (
       <div
         key={`${row}-${col}`}
-        className={`square ${isLight ? 'light' : 'dark'} 
-                   ${isSelected ? 'selected' : ''} 
-                   ${isValidMoveSquare ? 'valid-move' : ''}`}
+        className={`square ${squareColor} ${isSelected ? 'selected' : ''} ${
+          isValidMove ? 'valid-move' : ''
+        }`}
         onClick={() => onSquareClick({ row, col })}
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, { row, col })}
@@ -73,13 +87,36 @@ const Board: React.FC<BoardProps> = ({ board, selectedPiece, validMoves, onSquar
     );
   };
 
-  return (
-    <div className="board">
-      {Array(8).fill(null).map((_, row) => (
-        <div key={row} className="row">
-          {Array(8).fill(null).map((_, col) => renderSquare(row, col))}
+  const renderCoordinates = () => {
+    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+
+    return (
+      <>
+        <div className="coordinates files">
+          {files.map(file => (
+            <div key={file} className="coordinate">{file}</div>
+          ))}
         </div>
-      ))}
+        <div className="coordinates ranks">
+          {ranks.map(rank => (
+            <div key={rank} className="coordinate">{rank}</div>
+          ))}
+        </div>
+      </>
+    );
+  };
+
+  return (
+    <div className="board-container">
+      {renderCoordinates()}
+      <div className="board">
+        {Array(8).fill(null).map((_, row) => (
+          <div key={row} className="board-row">
+            {Array(8).fill(null).map((_, col) => renderSquare(row, col))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

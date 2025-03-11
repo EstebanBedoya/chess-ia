@@ -1,13 +1,21 @@
+.board-container {
+  position: relative;
+  padding: 24px;
+  display: inline-block;
+  background-color: #2f2f2f;
+  border-radius: 8px;
+}
+
 .board {
   display: flex;
   flex-direction: column;
-  width: 640px;
-  height: 640px;
-  border: 2px solid #333;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  border: 2px solid #1a1a1a;
+  width: 480px;
+  height: 480px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
-.row {
+.board-row {
   display: flex;
   flex: 1;
 }
@@ -17,32 +25,64 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 40px;
   cursor: pointer;
   user-select: none;
   position: relative;
-  transition: all 0.2s ease;
+  width: 60px;
+  height: 60px;
 }
 
-.square.light {
-  background-color: #f0d9b5;
+.square.white {
+  background-color: #eeeed2;
 }
 
-.square.dark {
-  background-color: #b58863;
+.square.black {
+  background-color: #769656;
 }
 
 .square.selected {
-  background-color: #7b61ff;
+  background-color: #baca2b;
 }
 
 .square.valid-move::before {
   content: '';
   position: absolute;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background-color: rgba(0, 255, 0, 0.3);
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.coordinates {
+  position: absolute;
+  display: flex;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Arial', sans-serif;
+}
+
+.coordinates.files {
+  bottom: 4px;
+  left: 30px;
+  right: 20px;
+  justify-content: space-around;
+}
+
+.coordinates.ranks {
+  top: 30px;
+  left: 8px;
+  bottom: 20px;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+.coordinate {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .piece {
@@ -53,9 +93,11 @@
   height: 100%;
   cursor: grab;
   user-select: none;
-  transition: transform 0.2s ease;
-  font-size: 3.5rem;
-  font-family: "Noto Sans", "Segoe UI Symbol", "DejaVu Sans", sans-serif;
+  transition: transform 0.15s ease;
+  font-size: 3rem;
+  font-family: "Chess", "Segoe UI Symbol", "Noto Chess", system-ui;
+  font-weight: normal;
+  line-height: 1;
 }
 
 .piece:active {
@@ -63,27 +105,17 @@
 }
 
 .piece:hover {
-  transform: scale(1.1);
+  transform: scale(1.05);
 }
 
 .piece.white {
   color: #ffffff;
-  text-shadow: 
-    -1px -1px 0 #000,
-    1px -1px 0 #000,
-    -1px 1px 0 #000,
-    1px 1px 0 #000,
-    0 0 8px rgba(0, 0, 0, 0.5);
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.4));
 }
 
 .piece.black {
   color: #000000;
-  text-shadow: 
-    -1px -1px 0 #fff,
-    1px -1px 0 #fff,
-    -1px 1px 0 #fff,
-    1px 1px 0 #fff,
-    0 0 8px rgba(255, 255, 255, 0.5);
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.4));
 }
 
 .game {
@@ -91,6 +123,7 @@
   flex-direction: column;
   align-items: center;
   gap: 20px;
+  padding: 20px;
 }
 
 .game-info {
