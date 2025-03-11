@@ -1,0 +1,96 @@
+.difficulty-selector {
+  margin: 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.difficulty-selector label {
+  font-weight: bold;
+  color: #333;
+}
+
+.difficulty-selector select {
+  padding: 5px 10px;
+  border: 2px solid #ccc;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.difficulty-selector select:disabled {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+}
+
+.difficulty-selector select:focus {
+  outline: none;
+  border-color: #666;
+}
+
+.difficulty-selector h3 {
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 1.2em;
+}
+
+.difficulty-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.difficulty-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.difficulty-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.difficulty-button.active {
+  background-color: #7b61ff;
+  color: white;
+}
+
+.difficulty-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Estilos específicos por dificultad */
+.difficulty-button:nth-child(1) {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.difficulty-button:nth-child(2) {
+  background-color: #FFA726;
+  color: white;
+}
+
+.difficulty-button:nth-child(3) {
+  background-color: #EF5350;
+  color: white;
+}
+
+.difficulty-button:nth-child(1).active {
+  background-color: #388E3C;
+}
+
+.difficulty-button:nth-child(2).active {
+  background-color: #F57C00;
+}
+
+.difficulty-button:nth-child(3).active {
+  background-color: #D32F2F;
+} 

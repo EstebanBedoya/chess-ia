@@ -2,6 +2,14 @@ import React from 'react';
 import './Board.css';
 import { Piece, Position } from '../pieces/Piece';
 
+const getPieceSymbol = (piece: Piece): string => {
+  const symbols = {
+    white: { king: '♔', queen: '♕', rook: '♖', bishop: '♗', knight: '♘', pawn: '♙' },
+    black: { king: '♚', queen: '♛', rook: '♜', bishop: '♝', knight: '♞', pawn: '♟' }
+  };
+  return symbols[piece.getColor()][piece.getType()];
+};
+
 interface BoardProps {
   board: (Piece | null)[][];
   selectedPiece: Position | null;
@@ -10,20 +18,6 @@ interface BoardProps {
 }
 
 const Board: React.FC<BoardProps> = ({ board, selectedPiece, validMoves, onSquareClick }) => {
-  const getPieceSymbol = (piece: Piece | null): string => {
-    if (!piece) return '';
-    const isWhite = piece.getColor() === 'white';
-    switch (piece.getType()) {
-      case 'king':   return isWhite ? '♚' : '♚';
-      case 'queen':  return isWhite ? '♛' : '♛';
-      case 'rook':   return isWhite ? '♜' : '♜';
-      case 'bishop': return isWhite ? '♝' : '♝';
-      case 'knight': return isWhite ? '♞' : '♞';
-      case 'pawn':   return isWhite ? '♟' : '♟';
-      default: return '';
-    }
-  };
-
   const isValidMove = (row: number, col: number): boolean => {
     return validMoves.some(move => move.row === row && move.col === col);
   };

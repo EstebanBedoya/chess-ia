@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Board from './Board';
 import { Piece, Position, PieceColor } from '../pieces/Piece';
 import { Pawn } from '../pieces/Pawn';
@@ -7,6 +7,10 @@ import { Knight } from '../pieces/Knight';
 import { Bishop } from '../pieces/Bishop';
 import { Queen } from '../pieces/Queen';
 import { King } from '../pieces/King';
+import { AIService, Difficulty } from '../services/AIService';
+import DifficultySelector from './DifficultySelector';
+import { boardToFEN } from '../utils/fenUtils';
+import './Game.css';
 
 interface GameState {
   board: (Piece | null)[][];
@@ -15,6 +19,9 @@ interface GameState {
   validMoves: Position[];
   isCheck: boolean;
   isCheckmate: boolean;
+  gameMode: 'human' | 'ai';
+  difficulty: Difficulty;
+  isAIThinking: boolean;
 }
 
 const Game: React.FC = () => {
@@ -24,8 +31,83 @@ const Game: React.FC = () => {
     selectedPiece: null,
     validMoves: [],
     isCheck: false,
-    isCheckmate: false
+    isCheckmate: false,
+    gameMode: 'human',
+    difficulty: 'medium',
+    isAIThinking: false
   });
+
+  const aiService = new AIService(process.env.REACT_APP_OPENROUTER_API_KEY || '');
+
+  // Efecto para manejar los movimientos de la IA
+  useEffect(() => {
+    const handleAIMove = async () => {
+      if (
+        gameState.gameMode === 'ai' &&
+        gameState.currentTurn === 'black' &&
+        !gameState.isCheckmate &&
+        !gameState.isAIThinking
+      ) {
+        try {
+          setGameState(prev => ({ ...prev, isAIThinking: true }));
+          
+          // Obtener todos los movimientos válidos para las piezas negras
+          const allMoves: { from: Position; to: Position; }[] = [];
+          for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+              const piece = gameState.board[row][col];
+              if (piece && piece.getColor() === 'black') {
+                const validMoves = getValidMovesInCheck(piece, gameState.board);
+                validMoves.forEach(to => {
+                  allMoves.push({
+                    from: { row, col },
+                    to
+                  });
+                });
+              }
+            }
+          }
+
+          if (allMoves.length === 0) {
+            setGameState(prev => ({ ...prev, isAIThinking: false }));
+            return;
+          }
+
+          const fen = boardToFEN(gameState.board, gameState.currentTurn);
+          const aiMove = await aiService.getNextMove(
+            fen,
+            gameState.difficulty,
+            allMoves.map(move => move.to)
+          );
+
+          // Encontrar el movimiento completo basado en la posición elegida por la IA
+          const selectedMove = allMoves.find(
+            move => move.to.row === aiMove.row && move.to.col === aiMove.col
+          );
+
+          if (selectedMove) {
+            const newBoard = movePiece(selectedMove.from, selectedMove.to);
+            const isInCheck = checkForCheck(newBoard, 'white');
+            const isInCheckmate = isInCheck && checkForCheckmate(newBoard, 'white');
+
+            setGameState(prev => ({
+              ...prev,
+              board: newBoard,
+              currentTurn: 'white',
+              isCheck: isInCheck,
+              isCheckmate: isInCheckmate,
+              isAIThinking: false
+            }));
+          }
+        } catch (error) {
+          console.error('Error durante el movimiento de la IA:', error);
+          setGameState(prev => ({ ...prev, isAIThinking: false }));
+        }
+      }
+    };
+
+    handleAIMove();
+  }, [gameState.currentTurn, gameState.gameMode, gameState.isCheckmate]);
 
   function initializeBoard(): (Piece | null)[][] {
     const board = Array(8).fill(null).map(() => Array(8).fill(null));
@@ -74,6 +156,10 @@ const Game: React.FC = () => {
   };
 
   const handleSquareClick = (position: Position) => {
+    if (gameState.isAIThinking || (gameState.gameMode === 'ai' && gameState.currentTurn === 'black')) {
+      return;
+    }
+
     const { board, currentTurn, selectedPiece, isCheck } = gameState;
     const clickedPiece = board[position.row][position.col];
 
@@ -82,10 +168,8 @@ const Game: React.FC = () => {
       if (clickedPiece && clickedPiece.getColor() === currentTurn) {
         let validMoves = clickedPiece.getValidMoves(board);
         
-        // Si el rey está en jaque, filtrar solo los movimientos que lo resuelven
         if (isCheck) {
           validMoves = getValidMovesInCheck(clickedPiece, board);
-          // Si no hay movimientos válidos para esta pieza cuando hay jaque, no seleccionarla
           if (validMoves.length === 0) return;
         }
 
@@ -110,6 +194,7 @@ const Game: React.FC = () => {
       const isInCheckmate = isInCheck && checkForCheckmate(newBoard, nextTurn);
 
       setGameState({
+        ...gameState,
         board: newBoard,
         currentTurn: nextTurn,
         selectedPiece: null,
@@ -122,10 +207,8 @@ const Game: React.FC = () => {
       if (clickedPiece && clickedPiece.getColor() === currentTurn) {
         let validMoves = clickedPiece.getValidMoves(board);
         
-        // Si el rey está en jaque, filtrar solo los movimientos que lo resuelven
         if (isCheck) {
           validMoves = getValidMovesInCheck(clickedPiece, board);
-          // Si no hay movimientos válidos para esta pieza cuando hay jaque, no seleccionarla
           if (validMoves.length === 0) return;
         }
 
@@ -230,12 +313,61 @@ const Game: React.FC = () => {
     return true;
   };
 
+  const handleGameModeChange = (mode: 'human' | 'ai') => {
+    setGameState({
+      ...gameState,
+      gameMode: mode,
+      board: initializeBoard(),
+      currentTurn: 'white',
+      selectedPiece: null,
+      validMoves: [],
+      isCheck: false,
+      isCheckmate: false,
+      isAIThinking: false
+    });
+  };
+
+  const handleDifficultyChange = (newDifficulty: Difficulty) => {
+    setGameState({
+      ...gameState,
+      difficulty: newDifficulty
+    });
+  };
+
   return (
     <div className="game">
+      <div className="game-controls">
+        <div className="mode-selector">
+          <button
+            className={gameState.gameMode === 'human' ? 'active' : ''}
+            onClick={() => handleGameModeChange('human')}
+          >
+            Humano vs Humano
+          </button>
+          <button
+            className={gameState.gameMode === 'ai' ? 'active' : ''}
+            onClick={() => handleGameModeChange('ai')}
+          >
+            Humano vs IA
+          </button>
+        </div>
+        {gameState.gameMode === 'ai' && (
+          <DifficultySelector
+            difficulty={gameState.difficulty}
+            onDifficultyChange={handleDifficultyChange}
+            disabled={gameState.isAIThinking}
+          />
+        )}
+      </div>
       <div className="game-info">
-        <h2>Turno: {gameState.currentTurn === 'white' ? 'Blancas' : 'Negras'}</h2>
-        {gameState.isCheck && <p>¡JAQUE!</p>}
-        {gameState.isCheckmate && <p>¡JAQUE MATE!</p>}
+        {gameState.isCheckmate ? (
+          <h2>¡Jaque mate! Gana {gameState.currentTurn === 'white' ? 'Negro' : 'Blanco'}</h2>
+        ) : gameState.isCheck ? (
+          <h2>¡Jaque al Rey {gameState.currentTurn}!</h2>
+        ) : (
+          <h2>Turno: {gameState.currentTurn === 'white' ? 'Blanco' : 'Negro'}</h2>
+        )}
+        {gameState.isAIThinking && <p>La IA está pensando...</p>}
       </div>
       <Board
         board={gameState.board}
