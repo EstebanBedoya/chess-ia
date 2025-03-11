@@ -50,9 +50,9 @@ const Game: React.FC = () => {
       ) {
         try {
           setGameState(prev => ({ ...prev, isAIThinking: true }));
-          
+
           // Obtener todos los movimientos válidos para las piezas negras
-          const allMoves: { from: Position; to: Position; }[] = [];
+          const allMoves: { from: Position; to: Position }[] = [];
           for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 8; col++) {
               const piece = gameState.board[row][col];
@@ -74,31 +74,25 @@ const Game: React.FC = () => {
           }
 
           const fen = boardToFEN(gameState.board, gameState.currentTurn);
-          const aiMove = await aiService.getNextMove(
+          const move = await aiService.getNextMove(
             fen,
             gameState.difficulty,
-            allMoves.map(move => move.to)
+            allMoves,
+            gameState.board
           );
 
-          // Encontrar el movimiento completo basado en la posición elegida por la IA
-          const selectedMove = allMoves.find(
-            move => move.to.row === aiMove.row && move.to.col === aiMove.col
-          );
+          const newBoard = movePiece(move.from, move.to);
+          const isInCheck = checkForCheck(newBoard, 'white');
+          const isInCheckmate = isInCheck && checkForCheckmate(newBoard, 'white');
 
-          if (selectedMove) {
-            const newBoard = movePiece(selectedMove.from, selectedMove.to);
-            const isInCheck = checkForCheck(newBoard, 'white');
-            const isInCheckmate = isInCheck && checkForCheckmate(newBoard, 'white');
-
-            setGameState(prev => ({
-              ...prev,
-              board: newBoard,
-              currentTurn: 'white',
-              isCheck: isInCheck,
-              isCheckmate: isInCheckmate,
-              isAIThinking: false
-            }));
-          }
+          setGameState(prev => ({
+            ...prev,
+            board: newBoard,
+            currentTurn: 'white',
+            isCheck: isInCheck,
+            isCheckmate: isInCheckmate,
+            isAIThinking: false
+          }));
         } catch (error) {
           console.error('Error durante el movimiento de la IA:', error);
           setGameState(prev => ({ ...prev, isAIThinking: false }));

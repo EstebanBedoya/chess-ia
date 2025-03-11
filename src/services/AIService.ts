@@ -1,4 +1,5 @@
-import { Position } from '../pieces/Piece';
+import { Piece, Position } from '../pieces/Piece';
+import { moveToAlgebraic, algebraicToMove } from '../utils/algebraicNotation';
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
@@ -6,7 +7,10 @@ const difficultyConfigs: Record<Difficulty, { temperature: number; prompt: strin
   easy: {
     temperature: 0.9,
     prompt: `Eres un motor de ajedrez de nivel principiante. 
-    IMPORTANTE: Debes elegir un movimiento de la lista proporcionada y responder SOLO con un objeto JSON que contenga row y col.
+    IMPORTANTE: Debes elegir un movimiento de la lista proporcionada y responder SOLO con la notación algebraica del movimiento.
+    Ejemplos de respuestas válidas: "e4", "Nf3", "Bxe5", "O-O", "O-O-O"
+    NO agregues ningún texto adicional ni explicaciones.
+    
     Reglas:
     - Elige movimientos simples
     - No analices demasiado
@@ -16,7 +20,10 @@ const difficultyConfigs: Record<Difficulty, { temperature: number; prompt: strin
   medium: {
     temperature: 0.7,
     prompt: `Eres un motor de ajedrez de nivel intermedio.
-    IMPORTANTE: Debes elegir un movimiento de la lista proporcionada y responder SOLO con un objeto JSON que contenga row y col.
+    IMPORTANTE: Debes elegir un movimiento de la lista proporcionada y responder SOLO con la notación algebraica del movimiento.
+    Ejemplos de respuestas válidas: "e4", "Nf3", "Bxe5", "O-O", "O-O-O"
+    NO agregues ningún texto adicional ni explicaciones.
+    
     Reglas:
     - Analiza las jugadas con moderación
     - Busca tácticas simples
@@ -26,7 +33,10 @@ const difficultyConfigs: Record<Difficulty, { temperature: number; prompt: strin
   hard: {
     temperature: 0.5,
     prompt: `Eres un motor de ajedrez de nivel avanzado.
-    IMPORTANTE: Debes elegir un movimiento de la lista proporcionada y responder SOLO con un objeto JSON que contenga row y col.
+    IMPORTANTE: Debes elegir un movimiento de la lista proporcionada y responder SOLO con la notación algebraica del movimiento.
+    Ejemplos de respuestas válidas: "e4", "Nf3", "Bxe5", "O-O", "O-O-O"
+    NO agregues ningún texto adicional ni explicaciones.
+    
     Reglas:
     - Analiza profundamente cada movimiento
     - Busca las mejores tácticas
@@ -45,21 +55,26 @@ export class AIService {
   async getNextMove(
     boardState: string,
     difficulty: Difficulty,
-    validMoves: Position[]
-  ): Promise<Position> {
+    validMoves: { from: Position; to: Position }[],
+    board: (Piece | null)[][]
+  ): Promise<{ from: Position; to: Position }> {
     const config = difficultyConfigs[difficulty];
     
+    // Convertir los movimientos válidos a notación algebraica
+    const validMovesAlgebraic = validMoves.map(move => 
+      moveToAlgebraic(move.from, move.to, board)
+    );
+
     const prompt = `${config.prompt}
 
-      Analiza el siguiente tablero y sugiere el mejor movimiento según tu nivel de juego.
-      
-      Tablero actual (FEN):
+      Posición actual del tablero (FEN):
       ${boardState}
-      
-      Movimientos válidos disponibles:
-      ${JSON.stringify(validMoves)}
-      
-      Responde SOLO con el movimiento elegido en formato JSON: {"row": number, "col": number}
+
+      Movimientos válidos disponibles (DEBES elegir uno de estos):
+      ${JSON.stringify(validMovesAlgebraic)}
+
+      IMPORTANTE: Responde SOLO con la notación algebraica del movimiento elegido.
+      NO agregues explicaciones ni texto adicional.
     `;
 
     try {
@@ -68,7 +83,6 @@ export class AIService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.apiKey}`,
-          'HTTP-Referer': window.location.origin,
         },
         body: JSON.stringify({
           model: 'openchat/openchat-7b:free',
@@ -83,7 +97,8 @@ export class AIService {
             }
           ],
           temperature: config.temperature,
-          max_tokens: 500
+          max_tokens: 150,
+          response_format: { type: "text" }
         })
       });
 
@@ -98,30 +113,26 @@ export class AIService {
         throw new Error('Respuesta inválida de la IA');
       }
 
-      const moveString = data.choices[0].message.content.trim();
-      console.log('Movimiento elegido:', moveString);
+      const moveAlgebraic = data.choices[0].message.content.trim();
+      console.log('Movimiento elegido:', moveAlgebraic);
 
-      try {
-        const move = JSON.parse(moveString) as Position;
-        
-        // Verificar que el movimiento es válido
-        const isValidMove = validMoves.some(
-          validMove => validMove.row === move.row && validMove.col === move.col
-        );
-
-        if (!isValidMove) {
-          throw new Error('Movimiento inválido retornado por la IA');
-        }
-
-        return move;
-      } catch (parseError) {
-        console.error('Error al parsear la respuesta de la IA:', parseError);
-        throw new Error('Formato de respuesta inválido');
+      // Verificar que el movimiento está en la lista de movimientos válidos
+      if (!validMovesAlgebraic.includes(moveAlgebraic)) {
+        throw new Error('Movimiento inválido retornado por la IA');
       }
+
+      // Convertir la notación algebraica a posiciones
+      const move = algebraicToMove(moveAlgebraic, board);
+      if (!move) {
+        throw new Error('No se pudo convertir el movimiento algebraico a posiciones');
+      }
+
+      return move;
     } catch (error) {
       console.error('Error al obtener movimiento de la IA:', error);
       // En caso de error, elegir un movimiento aleatorio de los válidos
-      return validMoves[Math.floor(Math.random() * validMoves.length)];
+      const randomMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+      return randomMove;
     }
   }
 
