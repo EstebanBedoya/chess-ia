@@ -5,6 +5,11 @@ export class Pawn extends Piece {
     return 'pawn';
   }
 
+  canBePromoted(position: Position): boolean {
+    return (this.color === 'white' && position.row === 0) || 
+           (this.color === 'black' && position.row === 7);
+  }
+
   getValidMoves(board: (Piece | null)[][]): Position[] {
     const validMoves: Position[] = [];
     const direction = this.color === 'white' ? -1 : 1;

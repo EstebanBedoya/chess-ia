@@ -13,6 +13,7 @@ import DifficultySelector from './DifficultySelector';
 import { boardToFEN } from '../utils/fenUtils';
 import { moveToAlgebraic } from '../utils/algebraicNotation';
 import './Game.css';
+import PromotionDialog from './PromotionDialog';
 
 interface GameState {
   board: (Piece | null)[][];
@@ -25,6 +26,11 @@ interface GameState {
   difficulty: Difficulty;
   isAIThinking: boolean;
   moveHistory: string[];
+  pendingPromotion: {
+    from: Position;
+    to: Position;
+    color: PieceColor;
+  } | null;
 }
 
 const Game: React.FC = () => {
@@ -38,7 +44,8 @@ const Game: React.FC = () => {
     gameMode: 'human',
     difficulty: 'medium',
     isAIThinking: false,
-    moveHistory: []
+    moveHistory: [],
+    pendingPromotion: null
   });
 
   const aiService = new AIService(process.env.REACT_APP_OPENROUTER_API_KEY || '');
@@ -240,11 +247,70 @@ const Game: React.FC = () => {
     );
   };
 
+  const handlePromotion = (pieceType: 'queen' | 'rook' | 'bishop' | 'knight') => {
+    if (!gameState.pendingPromotion) return;
+
+    const { from, to, color } = gameState.pendingPromotion;
+    const newBoard = gameState.board.map(row => [...row]);
+
+    // Crear la nueva pieza según la selección
+    let promotedPiece: Piece;
+    switch (pieceType) {
+      case 'queen':
+        promotedPiece = new Queen(to, color);
+        break;
+      case 'rook':
+        promotedPiece = new Rook(to, color);
+        break;
+      case 'bishop':
+        promotedPiece = new Bishop(to, color);
+        break;
+      case 'knight':
+        promotedPiece = new Knight(to, color);
+        break;
+    }
+
+    newBoard[to.row][to.col] = promotedPiece;
+    newBoard[from.row][from.col] = null;
+
+    const nextTurn = color === 'white' ? 'black' : 'white';
+    const isInCheck = checkForCheck(newBoard, nextTurn);
+    const isInCheckmate = isInCheck && checkForCheckmate(newBoard, nextTurn);
+
+    // Generar notación algebraica del movimiento con promoción
+    const moveNotation = `${moveToAlgebraic(from, to, gameState.board)}=${pieceType.toUpperCase().charAt(0)}`;
+
+    setGameState(prev => ({
+      ...prev,
+      board: newBoard,
+      currentTurn: nextTurn,
+      selectedPiece: null,
+      validMoves: [],
+      isCheck: isInCheck,
+      isCheckmate: isInCheckmate,
+      pendingPromotion: null,
+      moveHistory: [...prev.moveHistory, moveNotation]
+    }));
+  };
+
   const movePiece = (from: Position, to: Position): (Piece | null)[][] => {
     const newBoard = gameState.board.map(row => [...row]);
     const piece = newBoard[from.row][from.col];
     
     if (piece) {
+      // Verificar si es una promoción de peón
+      if (piece.getType() === 'pawn' && piece instanceof Pawn && piece.canBePromoted(to)) {
+        setGameState(prev => ({
+          ...prev,
+          pendingPromotion: {
+            from,
+            to,
+            color: piece.getColor()
+          }
+        }));
+        return gameState.board; // Retornar el tablero sin cambios hasta que se elija la promoción
+      }
+
       piece.setPosition(to);
       newBoard[to.row][to.col] = piece;
       newBoard[from.row][from.col] = null;
@@ -330,7 +396,8 @@ const Game: React.FC = () => {
       isCheck: false,
       isCheckmate: false,
       isAIThinking: false,
-      moveHistory: []
+      moveHistory: [],
+      pendingPromotion: null
     });
   };
 
@@ -343,6 +410,12 @@ const Game: React.FC = () => {
 
   return (
     <div className="game">
+      {gameState.pendingPromotion && (
+        <PromotionDialog
+          color={gameState.pendingPromotion.color}
+          onSelect={handlePromotion}
+        />
+      )}
       <div className="game-controls">
         <div className="mode-selector">
           <button
