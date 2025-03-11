@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Board from './Board';
+import MoveHistory from './MoveHistory';
 import { Piece, Position, PieceColor } from '../pieces/Piece';
 import { Pawn } from '../pieces/Pawn';
 import { Rook } from '../pieces/Rook';
@@ -10,6 +11,7 @@ import { King } from '../pieces/King';
 import { AIService, Difficulty } from '../services/AIService';
 import DifficultySelector from './DifficultySelector';
 import { boardToFEN } from '../utils/fenUtils';
+import { moveToAlgebraic } from '../utils/algebraicNotation';
 import './Game.css';
 
 interface GameState {
@@ -22,6 +24,7 @@ interface GameState {
   gameMode: 'human' | 'ai';
   difficulty: Difficulty;
   isAIThinking: boolean;
+  moveHistory: string[];
 }
 
 const Game: React.FC = () => {
@@ -34,7 +37,8 @@ const Game: React.FC = () => {
     isCheckmate: false,
     gameMode: 'human',
     difficulty: 'medium',
-    isAIThinking: false
+    isAIThinking: false,
+    moveHistory: []
   });
 
   const aiService = new AIService(process.env.REACT_APP_OPENROUTER_API_KEY || '');
@@ -85,13 +89,17 @@ const Game: React.FC = () => {
           const isInCheck = checkForCheck(newBoard, 'white');
           const isInCheckmate = isInCheck && checkForCheckmate(newBoard, 'white');
 
+          // Generar notación algebraica del movimiento de la IA
+          const moveNotation = moveToAlgebraic(move.from, move.to, gameState.board);
+
           setGameState(prev => ({
             ...prev,
             board: newBoard,
             currentTurn: 'white',
             isCheck: isInCheck,
             isCheckmate: isInCheckmate,
-            isAIThinking: false
+            isAIThinking: false,
+            moveHistory: [...prev.moveHistory, moveNotation]
           }));
         } catch (error) {
           console.error('Error durante el movimiento de la IA:', error);
@@ -187,15 +195,19 @@ const Game: React.FC = () => {
       const isInCheck = checkForCheck(newBoard, nextTurn);
       const isInCheckmate = isInCheck && checkForCheckmate(newBoard, nextTurn);
 
-      setGameState({
-        ...gameState,
+      // Generar notación algebraica del movimiento
+      const moveNotation = moveToAlgebraic(selectedPiece, position, board);
+
+      setGameState(prev => ({
+        ...prev,
         board: newBoard,
         currentTurn: nextTurn,
         selectedPiece: null,
         validMoves: [],
         isCheck: isInCheck,
-        isCheckmate: isInCheckmate
-      });
+        isCheckmate: isInCheckmate,
+        moveHistory: [...prev.moveHistory, moveNotation]
+      }));
     } else {
       // Si se hace clic en otra pieza del mismo color, seleccionarla
       if (clickedPiece && clickedPiece.getColor() === currentTurn) {
@@ -317,7 +329,8 @@ const Game: React.FC = () => {
       validMoves: [],
       isCheck: false,
       isCheckmate: false,
-      isAIThinking: false
+      isAIThinking: false,
+      moveHistory: []
     });
   };
 
@@ -363,6 +376,7 @@ const Game: React.FC = () => {
         )}
         {gameState.isAIThinking && <p>La IA está pensando...</p>}
       </div>
+      <MoveHistory moves={gameState.moveHistory} />
       <Board
         board={gameState.board}
         selectedPiece={gameState.selectedPiece}

@@ -43,11 +43,12 @@
 .game-info {
   text-align: center;
   margin: 20px 0;
+
 }
 
 .game-info h2 {
   margin: 0;
-  color: #333;
+  color: white;
   font-size: 1.5em;
 }
 
